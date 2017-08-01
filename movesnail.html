@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>移动物体</title>
+</head>
+
+<body>
+  你的得分:
+  <h4 id="point">0</h4>
+  <canvas id="canvas" width="400" height="400"></canvas>
+</body>
+<script>
+  //定义初始化变量
+  var moveaway = ['down', 'right'], //设置移动方向,这边需要存储两个方向，分别是第一个位置和最后一个的方向
+    corearray = [{
+      x: 30,
+      y: 50
+    }], //拐点数组，存放的是点的位置
+    pointarray = {
+      x: 200,
+      y:200
+    },
+    getpoint = 0;
+  // 创建直线函数
+  function Snail() {
+    this.startx = 0;
+    this.starty = 0;
+    this.endx = 0;
+    this.endy = 0;
+    this.draw = function(cxt) {
+      ctx.beginPath(); //开始绘画路径
+      ctx.lineCap = "round"; //设置两边类型
+      ctx.lineWidth=5;//线条宽度
+      ctx.lineJoin = "round"; //设置拐角类型
+      ctx.moveTo(this.startx, this.starty); //起始位置
+      //获取拐点位置，并进行拐点绘制,需要判断一下如果拐点位置等于了开始点的当前位置，则结束一个拐点,该数组元素可能不存在
+      //所以加一层判断
+      console.log(corearray,moveaway);
+      if (corearray.length > 0) {
+        for (var i = 0, len = corearray.length; i < len; i++) {
+          if (corearray[i] && this.startx == corearray[i].x && this.starty == corearray[i].y) {
+            deleteItem(corearray, corearray[i]);
+            //deleteItem(moveaway, moveaway[0]);
+            moveaway.splice(0,1);
+          } else if(corearray[i]){
+            ctx.lineTo(corearray[i].x, corearray[i].y); //结束位置
+          }
+        }
+      }
+
+      //ctx.lineTo(20, 100);//结束位置
+      ctx.lineTo(this.endx, this.endy); //后面一个点
+      ctx.stroke(); //绘制已经定义的路径
+    }
+  }
+
+  function Point(x,y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 5;
+    this.fillStyle = "#f85455";
+    this.draw = function(cxt) {
+      cxt.fillStyle = this.fillStyle; //填充颜色
+      cxt.beginPath(); //开始一条路径
+      cxt.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, true); //创建圆形
+      cxt.closePath(); //设置曲线闭合
+      cxt.fill(); //填充绘图
+    }
+  }
+
+  //首先我们先绘制一条直线
+  var c = document.getElementById("canvas");
+  var ctx = c.getContext("2d");
+  var snail = new Snail();
+  snail.startx = 30;
+  snail.starty = 20;
+  snail.endx = 100;
+  snail.endy = 50;
+
+  // requestAnimationFrame的兼容性写法，这个函数方法作用和settimeout或者setinterval类似，
+  //不过他是浏览器专门针对动画提供的api，效果肯定比前两个好，节省资源。
+  window.requestAnimFrame = (function() {
+    return window.requestAnimationFrame ||
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame ||
+      window.oRequestAnimationFrame ||
+      window.msRequestAnimationFrame ||
+      function(callback) {
+        window.setTimeout(callback, 1000 / 60);
+      };
+  })();
+
+  window.cancelAnimationFrame = (function() {
+    return window.cancelAnimationFrame ||
+      window.webkitCancelAnimationFrame ||
+      window.mozCancelAnimationFrame ||
+      window.oCancelAnimationFrame ||
+      function(timer) {
+        window.clearTimeout(timer);
+      };
+  })();
+
+  //删除数组中的某一元素,这边item为集合
+  function deleteItem(array, item) {
+    for (var i = 0, len = array.length; i < len; i++) {
+      if (array[i] == item) {
+        array.splice(i, 1);
+      }
+    }
+  }
+
+  //设置键盘点击事件,这边点击事件主要用来添加拐点，然后更新moveaway的值，因为方向改变了
+  document.onkeydown = function(event) {
+    var e = event || window.event || arguments.callee.caller.arguments[0];
+    //获取结束的点，然后放入拐点位置
+    var keyendx = snail.endx,
+        keyendy = snail.endy,
+        nowaway = '';
+    //这边需要判断是否是当前运动方向，如果是当前的方向则运动无效果
+    nowaway = moveaway[moveaway.length - 1];
+
+
+    var newmoveaway = '';
+    if (e && e.keyCode == 37) { //上,左
+        newmoveaway = 'left';
+      //alert('38=上键，37=左键');
+    }else if(e && e.keyCode == 38){
+        newmoveaway = 'up';
+    }else if(e && e.keyCode == 39){
+        newmoveaway = 'right';
+      //alert('40=下键，39=右键');
+    }else if(e && e.keyCode == 40){
+        newmoveaway = 'down';
+    }
+    if(nowaway != newmoveaway){
+      //添加拐点
+      corearray.push({
+        x:keyendx,
+        y:keyendy
+      });
+      //修改后一个方向值
+      moveaway.push(newmoveaway);
+    }
+
+
+  };
+
+  var animRequest = null;
+  (function drawFrame() {
+    animRequest = window.requestAnimationFrame(drawFrame, c);
+    ctx.clearRect(0, 0, c.width, c.height); //清空指定矩形内的一个矩形,需要先清空，不然一直在
+    //这边的移动需要做方向判断，例如左右移动的时候只需要移动y的坐标，上下移动的时候需要改变x的坐标,同时需要判断
+    //两个值的方向
+    if (moveaway.length > 1) {
+      if (moveaway[0] == 'down') {
+        snail.starty += 1;
+      } else if (moveaway[0] == 'up') {
+        snail.starty -= 1;
+      } else if (moveaway[0] == 'right') {
+        snail.startx += 1;
+      } else if (moveaway[0] == 'left') {
+        snail.startx -= 1;
+      }
+
+      if (moveaway[moveaway.length - 1] == 'down') {
+        snail.endy += 1;
+      } else if (moveaway[moveaway.length - 1] == 'up') {
+        snail.endy -= 1;
+      } else if (moveaway[moveaway.length - 1] == 'right') {
+        snail.endx += 1;
+      } else if (moveaway[moveaway.length - 1] == 'left') {
+        snail.endx -= 1;
+      }
+    } else {
+      if (moveaway[0] == 'down') {
+        snail.endy += 1;
+        snail.starty += 1;
+      } else if (moveaway[0] == 'up') {
+        snail.endy -= 1;
+        snail.starty -= 1;
+      } else if (moveaway[0] == 'right') {
+        snail.endx += 1;
+        snail.startx += 1;
+      } else if (moveaway[0] == 'left') {
+        snail.endx -= 1;
+        snail.startx -= 1;
+      }
+    }
+
+    //边缘检测或者吃到小球
+    if(snail.endx == c.width || snail.endy == c.height || snail.endx == 0 || snail.endy == 0){
+      alert('游戏失败');
+      window.cancelAnimationFrame(animRequest);
+    }else if( Math.abs(snail.endx - pointarray.x) < 5 && Math.abs(snail.endy - pointarray.y) < 5){
+      getpoint++;
+      //生成一个canvas范围内的随机数
+      pointarray.x = Math.ceil((Math.random()) * 400);
+      pointarray.y = Math.ceil((Math.random()) * 400);
+      document.getElementById('point').innerHTML = getpoint;
+    }
+    var point = new Point(pointarray.x,pointarray.y);
+    snail.draw(ctx);
+    point.draw(ctx);
+  })();
+</script>
+
+</html>
